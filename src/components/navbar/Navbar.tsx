@@ -1,35 +1,49 @@
 import * as React from "react"
-import { Bell, User } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { CentriqLogo } from '@/components/ui/centriq-logo'
 
-export const Navbar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  (props, ref) => (
-    <div ref={ref} className="bg-white border-b border-gray-200 px-6 py-4" {...props}>
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2">
-            <CentriqLogo className="h-6" />
-          </div>
-          <nav className="flex items-center gap-8">
-            <a href="#" className="text-blue-600 font-medium">Dashboard</a>
-          </nav>
-        </div>
-        <div className="flex items-center gap-6">
-          {/* Notification Bell with Badge */}
-          <div className="relative">
-            <Bell className="w-5 h-5 text-gray-600 hover:text-gray-800 cursor-pointer" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-medium">1</span>
+interface NavbarProps extends React.HTMLAttributes<HTMLDivElement> {
+  userName?: string
+}
+
+export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
+  ({ userName = "User", ...props }, ref) => {
+    const getInitials = (name: string) => {
+      return name
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase())
+        .join('')
+        .slice(0, 2); // Take only first 2 initials
+    };
+
+    return (
+      <div ref={ref} className="bg-white border-b border-gray-200 px-6 py-4" {...props}>
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-2">
+              <CentriqLogo className="h-6" />
             </div>
+            <nav className="flex items-center gap-8">
+              <a href="#" className="text-blue-600 font-semibold text-sm leading-5 tracking-normal">Dashboard</a>
+            </nav>
           </div>
-          {/* User Avatar */}
-          <div className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer">
-            <User className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-6">
+            {/* Notification Bell with Badge */}
+            <div className="relative">
+              <Bell className="w-5 h-5 text-gray-600 hover:text-gray-800 cursor-pointer" />
+              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#E12121' }}>
+                <span className="text-white text-xs font-medium">1</span>
+              </div>
+            </div>
+            {/* User Avatar */}
+            <div className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer" style={{ backgroundColor: '#3B82F8', border: '1px solid #063E98' }}>
+              <span className="text-white text-xs font-semibold">{getInitials(userName)}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  )
+    );
+  }
 )
 
 Navbar.displayName = "Navbar"
