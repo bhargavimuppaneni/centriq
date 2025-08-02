@@ -17,7 +17,7 @@ export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
     };
 
     return (
-      <div ref={ref} className="bg-white border-b border-gray-200 px-8 py-4" {...props}>
+      <div ref={ref} className="sticky top-0 z-50 bg-white border-b border-gray-200 px-8 py-4" {...props}>
         <div className="flex items-center justify-between px-16 mx-auto" style={{ maxWidth: 'calc(100% - 40px)' }}>
           <div className="flex items-center gap-8 ml-2">
             <div className="flex items-center gap-2">
