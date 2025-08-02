@@ -1,11 +1,19 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Navbar } from '@/components/navbar';
+import { Modal } from '@/components/ui/modal';
 import { Pipeline } from '@/components/pipeline';
 import type { PipelineStep } from '@/components/pipeline';
+import { FeedValidationComponent } from './FeedValidationComponent';
 
 export const ClientDataSourceDashboard = () => {
+  const [showModal, setShowModal] = useState(false);
+
   const handleAddNewClient = () => {
-    console.log('Adding new client...');
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
   };
 
   const pipelineSteps: PipelineStep[] = [
@@ -15,7 +23,7 @@ export const ClientDataSourceDashboard = () => {
   ];
 
   return (
-    <div className="h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Top Navigation Bar */}
       {/* <Navbar userName="John Doe" /> */}
 
@@ -60,6 +68,16 @@ export const ClientDataSourceDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal for Feed Validation */}
+      <Modal 
+        isOpen={showModal} 
+        onClose={handleCloseModal}
+        title="Add a New Client & Upload URL Feed"
+        maxWidth="max-w-7xl"
+      >
+        <FeedValidationComponent />
+      </Modal>
     </div>
   );
 };
