@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Filter, Plus, MoreHorizontal, Calendar } from 'lucide-react';
+import { Search, Filter, Plus, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useCampaigns } from '../hooks/useCampaigns';
 import type { Campaign, CampaignFilters } from '../types';
 
@@ -9,7 +10,6 @@ export const CampaignsDashboard = () => {
   const [filters, setFilters] = useState<CampaignFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState('2025-06-15');
   const [endDate, setEndDate] = useState('2025-09-15');
   const [pageSize, setPageSize] = useState(10);
@@ -74,16 +74,9 @@ export const CampaignsDashboard = () => {
     return `${startFormatted} - ${endFormatted}`;
   };
 
-  const handleDateChange = (type: 'start' | 'end', value: string) => {
-    if (type === 'start') {
-      setStartDate(value);
-    } else {
-      setEndDate(value);
-    }
-  };
-
-  const applyDateRange = () => {
-    setShowDatePicker(false);
+  const handleDateRangeChange = (newStartDate: string, newEndDate: string) => {
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
     // Here you can add logic to filter campaigns based on date range
   };
 
@@ -156,57 +149,11 @@ export const CampaignsDashboard = () => {
             
             {/* Date Range and View Toggle */}
             <div className="flex items-center justify-between">
-              <div className="relative">
-                <div 
-                  className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300"
-                  onClick={() => setShowDatePicker(!showDatePicker)}
-                >
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">{formatDateRange(startDate, endDate)}</span>
-                </div>
-                
-                {/* Date Picker Dropdown */}
-                {showDatePicker && (
-                  <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50 min-w-[300px]">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => handleDateChange('start', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
-                        <input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => handleDateChange('end', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setShowDatePicker(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={applyDateRange}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Apply
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onDateChange={handleDateRangeChange}
+              />
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="text-gray-600">Convergence</Button>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">Tabular</Button>
