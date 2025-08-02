@@ -17,9 +17,9 @@ export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
     };
 
     return (
-      <div ref={ref} className="bg-white border-b border-gray-200 px-6 py-4" {...props}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-8">
+      <div ref={ref} className="bg-white border-b border-gray-200 px-8 py-4" {...props}>
+        <div className="flex items-center justify-between px-16 mx-auto" style={{ maxWidth: 'calc(100% - 40px)' }}>
+          <div className="flex items-center gap-8 ml-2">
             <div className="flex items-center gap-2">
               <CentriqLogo className="h-6" />
             </div>
@@ -27,7 +27,7 @@ export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
               <a href="#" className="text-blue-600 font-semibold text-sm leading-5 tracking-normal">Dashboard</a>
             </nav>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 mr-8">
             {/* Notification Bell with Badge */}
             <div className="relative">
               <Bell className="w-5 h-5 text-gray-600 hover:text-gray-800 cursor-pointer" />

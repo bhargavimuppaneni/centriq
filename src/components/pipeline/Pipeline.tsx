@@ -14,7 +14,7 @@ export interface PipelineProps {
 export const Pipeline = React.forwardRef<HTMLDivElement, PipelineProps>(
   ({ steps }, ref) => (
     <div ref={ref} className="bg-gray-100 px-6 py-8">
-      <div className="flex items-center justify-between max-w-6xl mx-auto relative">
+      <div className="flex items-center justify-between max-w-7xl relative ml-[120px] mr-auto">
         {/* Connecting lines */}
         <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-300 -translate-y-1/2 z-0"></div>
         
