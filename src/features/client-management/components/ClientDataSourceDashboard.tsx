@@ -17,7 +17,7 @@ export const ClientDataSourceDashboard = () => {
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
       {/* Top Navigation Bar */}
-      <Navbar userName="John Doe" />
+      {/* <Navbar userName="John Doe" /> */}
 
       {/* Progress Steps */}
       <Pipeline steps={pipelineSteps} />
