@@ -8,8 +8,10 @@ export const Route = createRootRoute({
   component: () => (
     <>
       <Navbar userName="John Doe" />
-      <Outlet />
-      <TanStackRouterDevtools />
+      <div className="pt-16"> {/* Increased padding to account for navbar height */}
+        <Outlet />
+      </div>
+      {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
     </>
   ),
 })
