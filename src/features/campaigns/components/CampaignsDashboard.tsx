@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Filter, Plus, MoreHorizontal, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Search, Filter, Plus, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useCampaigns } from '../hooks/useCampaigns';
 import type { Campaign, CampaignFilters } from '../types';
 
@@ -8,7 +10,9 @@ export const CampaignsDashboard = () => {
   const [filters, setFilters] = useState<CampaignFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [startDate, setStartDate] = useState('2025-06-15');
+  const [endDate, setEndDate] = useState('2025-09-15');
+  const [pageSize, setPageSize] = useState(10);
 
   const { data, isLoading, error } = useCampaigns(filters);
 
@@ -56,6 +60,26 @@ export const CampaignsDashboard = () => {
     });
   };
 
+  const formatDateRange = (start: string, end: string) => {
+    const startFormatted = new Date(start).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    const endFormatted = new Date(end).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    return `${startFormatted} - ${endFormatted}`;
+  };
+
+  const handleDateRangeChange = (newStartDate: string, newEndDate: string) => {
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+    // Here you can add logic to filter campaigns based on date range
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen bg-gray-100 flex flex-col">
@@ -84,10 +108,34 @@ export const CampaignsDashboard = () => {
   }
 
   const campaigns = data?.campaigns || [];
-  const totalCampaigns = data?.total || 0;
+  // const totalCampaigns = data?.total || 0;
+  // const totalPages = Math.ceil(totalCampaigns / pageSize);
+  // const startItem = (currentPage - 1) * pageSize + 1;
+  // const endItem = Math.min(currentPage * pageSize, totalCampaigns);
+
+  // Filter campaigns based on search term
+  const filteredCampaigns = campaigns.filter(campaign =>
+    campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    campaign.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Paginate filtered campaigns
+  const paginatedCampaigns = filteredCampaigns.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'rgb(241, 242, 244)' }}>
       {/* Main Content */}
       <div className="px-6 py-8">
         <div className="max-w-7xl mx-auto">
@@ -101,10 +149,11 @@ export const CampaignsDashboard = () => {
             
             {/* Date Range and View Toggle */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 cursor-pointer">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600">June 15, 2025 - September 15, 2025</span>
-              </div>
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onDateChange={handleDateRangeChange}
+              />
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="text-gray-600">Convergence</Button>
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">Tabular</Button>
@@ -118,7 +167,7 @@ export const CampaignsDashboard = () => {
           </div>
 
           {/* Data Table Card */}
-          <div className="">
+          <div className=""></div>
             {/* Search and Filters */}
             <div className="px-6 py-4">
               <div className="flex items-center justify-between gap-4">
@@ -161,40 +210,47 @@ export const CampaignsDashboard = () => {
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
+              <table className="w-full table-fixed">
+                <thead 
+                  className="border-b"
+                  style={{ 
+                    background: 'rgba(248, 248, 248, 1)',
+                    height: '73px',
+                    opacity: 1
+                  }}
+                >
                   <tr>
-                    <th className="px-6 py-3 text-left w-12">
+                    <th className="px-6 py-1 text-left w-12">
                       <input type="checkbox" className="rounded border-gray-300" />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-left text-xs font-bold text-gray-500 tracking-wider w-64">
                       Campaign Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-left text-xs font-bold text-gray-500 tracking-wider w-40">
                       Client Name
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-center text-xs font-bold text-gray-500 tracking-wider w-28">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-center text-xs font-bold text-gray-500 tracking-wider w-32">
                       Start Date
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-center text-xs font-bold text-gray-500 tracking-wider w-32">
                       End Date
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-right text-xs font-bold text-gray-500 tracking-wider w-32">
                       Total Budget
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-right text-xs font-bold text-gray-500 tracking-wider w-32">
                       Current Spend
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-center text-xs font-bold text-gray-500 tracking-wider w-36">
                       Budget Utilized
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-1 text-right text-xs font-bold text-gray-500 tracking-wider w-32">
                       Achieved CTAs
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                    <th className="px-3 py-1 text-center text-xs font-bold text-gray-500 tracking-wider w-16">
                       Actions
                     </th>
                   </tr>
@@ -203,38 +259,38 @@ export const CampaignsDashboard = () => {
               
               {/* Table Body with styling */}
               <div className="bg-gray-25 rounded-lg shadow-sm border border-gray-100 mt-2">
-                <table className="w-full">
+                <table className="w-full table-fixed">
                   <tbody className="bg-white">
-                    {campaigns.map((campaign, index) => (
-                      <tr key={campaign.id} className={`hover:bg-gray-50 ${index < campaigns.length - 1 ? 'border-b border-gray-200' : ''} ${index === 0 ? 'first:rounded-t-lg' : ''} ${index === campaigns.length - 1 ? 'last:rounded-b-lg' : ''}`}>
-                        <td className="px-6 py-4">
+                    {paginatedCampaigns.map((campaign, index) => (
+                      <tr key={campaign.id} className={`hover:bg-gray-50 ${index < paginatedCampaigns.length - 1 ? 'border-b border-gray-200' : ''} ${index === 0 ? 'first:rounded-t-lg' : ''} ${index === paginatedCampaigns.length - 1 ? 'last:rounded-b-lg' : ''}`}>
+                        <td className="px-6 py-4 w-12">
                           <input type="checkbox" className="rounded border-gray-300" />
                         </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="font-medium text-gray-900">{campaign.name}</div>
-                            <div className="text-sm text-gray-500">{campaign.description}</div>
+                        <td className="px-6 py-4 w-64">
+                          <div className="min-w-0">
+                            <div className="text-sm font-normal text-gray-900 truncate">{campaign.name}</div>
+                            <div className="text-xs text-gray-500 truncate">{campaign.description}</div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
+                        <td className="px-6 py-4 text-sm font-normal text-gray-900 w-40 truncate">
                           {campaign.clientName}
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-6 py-4 text-center w-28">
                           {getStatusBadge(campaign.status)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                        <td className="px-6 py-4 text-sm font-normal text-gray-900 text-center w-32">
                           {formatDate(campaign.startDate)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                        <td className="px-6 py-4 text-sm font-normal text-gray-900 text-center w-32">
                           {formatDate(campaign.endDate)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">
+                        <td className="px-6 py-4 text-sm font-normal text-gray-900 text-right w-32">
                           {formatCurrency(campaign.budget)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">
+                        <td className="px-6 py-4 text-sm font-normal text-gray-900 text-right w-32">
                           {formatCurrency(campaign.currentSpend || 0)}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 w-36">
                           <div className="flex items-center justify-center gap-2">
                             <div className="w-16 bg-gray-200 rounded-full h-2">
                               <div 
@@ -242,14 +298,14 @@ export const CampaignsDashboard = () => {
                                 style={{ width: `${Math.min(campaign.budgetUtilized || 0, 100)}%` }}
                               ></div>
                             </div>
-                            <span className="text-sm text-gray-600 font-medium min-w-[2rem]">{campaign.budgetUtilized || 0}%</span>
+                            <span className="text-xs font-normal text-gray-600 min-w-[2rem]">{campaign.budgetUtilized || 0}%</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="text-sm text-gray-900 font-medium">{(campaign.achievedCTAs || 0).toLocaleString()}</div>
-                          <div className="text-sm text-gray-500">{formatCurrency(campaign.costPerAction || 0)}</div>
+                        <td className="px-6 py-4 text-right w-32">
+                          <div className="text-sm font-normal text-gray-900">{(campaign.achievedCTAs || 0).toLocaleString()}</div>
+                          <div className="text-xs text-gray-500">{formatCurrency(campaign.costPerAction || 0)}</div>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-6 py-4 text-center w-16">
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
@@ -262,31 +318,17 @@ export const CampaignsDashboard = () => {
             </div>
 
             {/* Pagination */}
-            <div className="px-6 py-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing 1-{campaigns.length} of {totalCampaigns} campaigns
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={currentPage === 1} className="h-8 w-8 p-0">
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="sm" className="bg-blue-600 text-white border-blue-600 h-8 min-w-[2rem]">1</Button>
-                <Button variant="outline" size="sm" className="h-8 min-w-[2rem]">2</Button>
-                <Button variant="outline" size="sm" className="h-8 min-w-[2rem]">3</Button>
-                <Button variant="outline" size="sm" className="h-8 min-w-[2rem]">4</Button>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                <select className="ml-4 text-sm border border-gray-300 rounded px-3 py-1 h-8">
-                  <option>10 per page</option>
-                  <option>25 per page</option>
-                  <option>50 per page</option>
-                </select>
-              </div>
-            </div>
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(filteredCampaigns.length / pageSize)}
+              totalItems={filteredCampaigns.length}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              itemName="campaigns"
+            />
           </div>
         </div>
       </div>
-    </div>
   );
 };
