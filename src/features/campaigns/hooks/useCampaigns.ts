@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Campaign, CreateCampaignRequest, CampaignsResponse, CampaignFilters } from '../types';
+import { jobStatsApi, type JobStatsRequest, type JobStatsResponse } from '../services/jobStatsApi';
 
 // Mock API functions - replace with actual API calls
 const campaignsApi = {
@@ -86,7 +87,7 @@ const campaignsApi = {
         clientId: "ae6b4817-5c16-4b3d-8e44-ca468c67ef4f",
         clientName: "TechCorp Inc",
         id: "3f561d96-20c5-6d94-c749-d84cff9f86ge",
-        name: "Software Engineer Hiring",
+        name: "aspen - 1 copy 2",
         description: "Senior software engineer recruitment campaign",
         startDate: "2025-07-01T00:00:00Z",
         endDate: "2025-10-31T00:00:00Z",
@@ -205,6 +206,22 @@ export const useCampaigns = (filters?: CampaignFilters) => {
   });
 };
 
+export const useCampaign = (campaignId: string) => {
+  return useQuery({
+    queryKey: ['campaign', campaignId],
+    queryFn: async () => {
+      // In a real app, this would be an API call to get a specific campaign
+      const campaignsResponse = await campaignsApi.getCampaigns();
+      const campaign = campaignsResponse.campaigns.find(c => c.id === campaignId);
+      if (!campaign) {
+        throw new Error(`Campaign with ID ${campaignId} not found`);
+      }
+      return campaign;
+    },
+    enabled: !!campaignId,
+  });
+};
+
 export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
   
@@ -213,5 +230,35 @@ export const useCreateCampaign = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
     },
+  });
+};
+
+export const useJobStats = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (request: JobStatsRequest) => jobStatsApi.getJobStats(request),
+    onSuccess: (data, variables) => {
+      console.log('Job stats fetched successfully for campaign:', variables.CampaignName);
+      console.log('Job stats data:', data);
+      
+      // Store the job stats data in the query cache for later use
+      queryClient.setQueryData(['jobStats', variables.CampaignName], data);
+    },
+    onError: (error, variables) => {
+      console.error('Error fetching job stats for campaign:', variables.CampaignName, error);
+    },
+  });
+};
+
+// Hook to get cached job stats data
+export const useJobStatsData = (campaignName: string) => {
+  return useQuery({
+    queryKey: ['jobStats', campaignName],
+    queryFn: () => {
+      // This will return the cached data set by the mutation
+      return null;
+    },
+    enabled: false, // Disable automatic fetching since we only want cached data
   });
 };
