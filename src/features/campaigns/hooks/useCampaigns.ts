@@ -205,6 +205,22 @@ export const useCampaigns = (filters?: CampaignFilters) => {
   });
 };
 
+export const useCampaign = (campaignId: string) => {
+  return useQuery({
+    queryKey: ['campaign', campaignId],
+    queryFn: async () => {
+      // In a real app, this would be an API call to get a specific campaign
+      const campaignsResponse = await campaignsApi.getCampaigns();
+      const campaign = campaignsResponse.campaigns.find(c => c.id === campaignId);
+      if (!campaign) {
+        throw new Error(`Campaign with ID ${campaignId} not found`);
+      }
+      return campaign;
+    },
+    enabled: !!campaignId,
+  });
+};
+
 export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
   

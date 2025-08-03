@@ -7,6 +7,7 @@ import { CampaignMetrics } from './CampaignMetrics';
 import { CampaignActions } from './CampaignActions';
 import { BudgetGoals } from './BudgetGoals';
 import { CampaignDetails } from './CampaignDetails';
+import { useCampaign } from '../hooks/useCampaigns';
 
 // Sample data for the chart
 const chartData = [
@@ -21,12 +22,14 @@ const chartData = [
 ];
 
 interface CampaignOverviewProps {
+  campaignId?: string;
+  // Keep existing props as fallback defaults
   campaignName?: string;
   clientName?: string;
   createdBy?: string;
   createdDate?: string;
   dateRange?: string;
-  status?: 'Active' | 'Paused' | 'Completed' | 'Draft';
+  status?: 'Active' | 'Paused' | 'Completed' | 'Draft' | 'Review' | 'Pending';
   totalSpend?: number;
   achievedCTAs?: number;
   averageCPA?: number;
@@ -57,42 +60,117 @@ interface CampaignOverviewProps {
 }
 
 export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
-  campaignName = "Drivers for Uber",
-  clientName = "GlobalTech Solutions",
-  createdBy = "Sarah Mitchell",
-  createdDate = "June 10, 2025",
-  status = "Active",
-  totalSpend = 2850,
-  achievedCTAs = 1500,
-  averageCPA = 5.70,
-  ctr = 3.2,
-  spendChange = 12.5,
-  ctaChange = 8.3,
-  cpaChange = -5.2,
-  ctrChange = 15.7,
+  campaignId,
+  // Fallback defaults if no campaignId is provided
+  campaignName: fallbackCampaignName = "Drivers for Uber",
+  clientName: fallbackClientName = "GlobalTech Solutions",
+  createdBy: fallbackCreatedBy = "Sarah Mitchell",
+  createdDate: fallbackCreatedDate = "June 10, 2025",
+  status: fallbackStatus = "Active",
+  totalSpend: fallbackTotalSpend = 2850,
+  achievedCTAs: fallbackAchievedCTAs = 1500,
+  averageCPA: fallbackAverageCPA = 5.70,
+  ctr: fallbackCtr = 3.2,
+  spendChange: fallbackSpendChange = 12.5,
+  ctaChange: fallbackCtaChange = 8.3,
+  cpaChange: fallbackCpaChange = -5.2,
+  ctrChange: fallbackCtrChange = 15.7,
   chartData: propChartData = chartData,
   // Budget & Goals defaults
-  totalBudget = 4000,
-  currentSpend = 1750,
-  remainingBudget = 2250,
-  budgetProgress = 43.75,
-  targetApplications = 2000,
-  currentApplications = 845,
-  applicationsNeeded = 1155,
-  goalProgress = 42.25,
+  totalBudget: fallbackTotalBudget = 4000,
+  currentSpend: fallbackCurrentSpend = 1750,
+  remainingBudget: fallbackRemainingBudget = 2250,
+  budgetProgress: fallbackBudgetProgress = 43.75,
+  targetApplications: fallbackTargetApplications = 2000,
+  currentApplications: fallbackCurrentApplications = 845,
+  applicationsNeeded: fallbackApplicationsNeeded = 1155,
+  goalProgress: fallbackGoalProgress = 42.25,
   // Campaign Details defaults
-  startDate = "Sep 1, 2023",
-  endDate = "Sep 30, 2023",
-  duration = "30 days",
-  totalJobs = 125,
-  jobCategories = "Software Engineering",
-  dataSource = "XML Feed",
-  lastModifiedBy = "Sep 5, 2023",
-  lastModifiedDate = "Aug 25, 2023"
+  startDate: fallbackStartDate = "Sep 1, 2023",
+  endDate: fallbackEndDate = "Sep 30, 2023",
+  duration: fallbackDuration = "30 days",
+  totalJobs: fallbackTotalJobs = 125,
+  jobCategories: fallbackJobCategories = "Software Engineering",
+  dataSource: fallbackDataSource = "XML Feed",
+  lastModifiedBy: fallbackLastModifiedBy = "Sep 5, 2023",
+  lastModifiedDate: fallbackLastModifiedDate = "Aug 25, 2023"
 }) => {
   const [activeTab, setActiveTab] = useState("Overview");
   const [dateRangeStart, setDateRangeStart] = useState('2025-06-15');
   const [dateRangeEnd, setDateRangeEnd] = useState('2025-09-15');
+
+  // Fetch campaign data if campaignId is provided
+  const { data: campaign, isLoading, error } = useCampaign(campaignId || '');
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Use fetched campaign data if available, otherwise use fallback props
+  const campaignName = campaign?.name || fallbackCampaignName;
+  const clientName = campaign?.clientName || fallbackClientName;
+  const createdBy = campaign?.createdBy || fallbackCreatedBy;
+  const createdDate = campaign ? formatDate(campaign.createdDate) : fallbackCreatedDate;
+  const status = campaign?.status || fallbackStatus;
+  const totalSpend = campaign?.currentSpend || fallbackTotalSpend;
+  const achievedCTAs = campaign?.achievedCTAs || fallbackAchievedCTAs;
+  const averageCPA = campaign?.costPerAction || fallbackAverageCPA;
+  const ctr = fallbackCtr; // Not available in campaign data, use fallback
+  const spendChange = fallbackSpendChange; // Not available in campaign data, use fallback
+  const ctaChange = fallbackCtaChange; // Not available in campaign data, use fallback
+  const cpaChange = fallbackCpaChange; // Not available in campaign data, use fallback
+  const ctrChange = fallbackCtrChange; // Not available in campaign data, use fallback
+  
+  // Budget & Goals - use campaign data where available
+  const totalBudget = campaign?.budget || fallbackTotalBudget;
+  const currentSpend = campaign?.currentSpend || fallbackCurrentSpend;
+  const remainingBudget = totalBudget - currentSpend;
+  const budgetProgress = campaign?.budgetUtilized || fallbackBudgetProgress;
+  const targetApplications = fallbackTargetApplications; // Not in campaign data
+  const currentApplications = fallbackCurrentApplications; // Not in campaign data
+  const applicationsNeeded = targetApplications - currentApplications;
+  const goalProgress = (currentApplications / targetApplications) * 100;
+  
+  // Campaign Details - use campaign data where available
+  const startDate = campaign ? formatDate(campaign.startDate) : fallbackStartDate;
+  const endDate = campaign ? formatDate(campaign.endDate) : fallbackEndDate;
+  const duration = fallbackDuration; // Calculate or use fallback
+  const totalJobs = fallbackTotalJobs; // Not in campaign data
+  const jobCategories = fallbackJobCategories; // Not in campaign data
+  const dataSource = fallbackDataSource; // Not in campaign data
+  const lastModifiedBy = campaign ? formatDate(campaign.modifiedDate) : fallbackLastModifiedBy;
+  const lastModifiedDate = fallbackLastModifiedDate; // Use fallback
+
+  if (campaignId && isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (campaignId && error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-red-600 text-center">
+            Error loading campaign: {error instanceof Error ? error.message : 'Unknown error'}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleDateRangeChange = (newStartDate: string, newEndDate: string) => {
     setDateRangeStart(newStartDate);
@@ -118,7 +196,7 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 page-transition">
       <div className="max-w-7xl mx-auto">
         <CampaignHeader
           campaignName={campaignName}

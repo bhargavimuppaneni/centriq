@@ -15,6 +15,9 @@ import { Route as IndexRouteImport } from './routes/index'
 
 const DashboardLazyRouteImport = createFileRoute('/dashboard')()
 const CampaignLazyRouteImport = createFileRoute('/campaign')()
+const CampaignOverviewIdLazyRouteImport = createFileRoute(
+  '/campaignOverview/$id',
+)()
 
 const DashboardLazyRoute = DashboardLazyRouteImport.update({
   id: '/dashboard',
@@ -31,35 +34,46 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CampaignOverviewIdLazyRoute = CampaignOverviewIdLazyRouteImport.update({
+  id: '/campaignOverview/$id',
+  path: '/campaignOverview/$id',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/campaignOverview.$id.lazy').then((d) => d.Route),
+)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/campaign': typeof CampaignLazyRoute
   '/dashboard': typeof DashboardLazyRoute
+  '/campaignOverview/$id': typeof CampaignOverviewIdLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/campaign': typeof CampaignLazyRoute
   '/dashboard': typeof DashboardLazyRoute
+  '/campaignOverview/$id': typeof CampaignOverviewIdLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/campaign': typeof CampaignLazyRoute
   '/dashboard': typeof DashboardLazyRoute
+  '/campaignOverview/$id': typeof CampaignOverviewIdLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/campaign' | '/dashboard'
+  fullPaths: '/' | '/campaign' | '/dashboard' | '/campaignOverview/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/campaign' | '/dashboard'
-  id: '__root__' | '/' | '/campaign' | '/dashboard'
+  to: '/' | '/campaign' | '/dashboard' | '/campaignOverview/$id'
+  id: '__root__' | '/' | '/campaign' | '/dashboard' | '/campaignOverview/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CampaignLazyRoute: typeof CampaignLazyRoute
   DashboardLazyRoute: typeof DashboardLazyRoute
+  CampaignOverviewIdLazyRoute: typeof CampaignOverviewIdLazyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -85,6 +99,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/campaignOverview/$id': {
+      id: '/campaignOverview/$id'
+      path: '/campaignOverview/$id'
+      fullPath: '/campaignOverview/$id'
+      preLoaderRoute: typeof CampaignOverviewIdLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -92,6 +113,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CampaignLazyRoute: CampaignLazyRoute,
   DashboardLazyRoute: DashboardLazyRoute,
+  CampaignOverviewIdLazyRoute: CampaignOverviewIdLazyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
