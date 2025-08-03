@@ -6,5 +6,5 @@ export { CampaignHeader } from './components/CampaignHeader';
 export { CampaignTabs } from './components/CampaignTabs';
 export { CampaignMetrics } from './components/CampaignMetrics';
 export { CampaignActions } from './components/CampaignActions';
-export { useCampaigns, useCampaign, useCreateCampaign } from './hooks/useCampaigns';
-export type { Campaign, CreateCampaignRequest, CampaignFilters, CampaignsResponse } from './types';
+export { useCampaigns, useCampaign, useCreateCampaign, useJobStats } from './hooks/useCampaigns';
+export type { Campaign, CreateCampaignRequest, CampaignFilters, CampaignsResponse, JobStatsRequest, JobStatsResponse } from './types';

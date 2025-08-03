@@ -79,7 +79,7 @@ export const CampaignsDashboard = () => {
               <span>Dashboard</span>
               <span>›</span>
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-4">Campaigns Dashboard</h1>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-4 flex">Campaigns Dashboard</h1>
             
             {/* Date Range and View Toggle */}
             <div className="flex items-center justify-between">

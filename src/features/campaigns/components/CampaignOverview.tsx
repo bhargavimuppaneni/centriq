@@ -7,7 +7,7 @@ import { CampaignMetrics } from './CampaignMetrics';
 import { CampaignActions } from './CampaignActions';
 import { BudgetGoals } from './BudgetGoals';
 import { CampaignDetails } from './CampaignDetails';
-import { useCampaign } from '../hooks/useCampaigns';
+import { useCampaign, useJobStats } from '../hooks/useCampaigns';
 
 // Sample data for the chart
 const chartData = [
@@ -101,6 +101,7 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
 
   // Fetch campaign data if campaignId is provided
   const { data: campaign, isLoading, error } = useCampaign(campaignId || '');
+  const jobStatsMutation = useJobStats();
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -172,12 +173,24 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
     );
   }
 
-  const handleDateRangeChange = (newStartDate: string, newEndDate: string) => {
+  const handleDateRangeChange = async (newStartDate: string, newEndDate: string) => {
     setDateRangeStart(newStartDate);
     setDateRangeEnd(newEndDate);
     console.log('Date range changed to:', newStartDate, 'to', newEndDate);
-    // Here you can implement logic to filter the chart data based on the selected range
-    // or make an API call to fetch new data for the selected date range
+    
+    // Call job stats API with new date range if we have campaign data
+    if (campaign) {
+      try {
+        await jobStatsMutation.mutateAsync({
+          FromDate: newStartDate,
+          ToDate: newEndDate,
+          OrgId: campaign.orgId,
+          CampaignName: campaign.name
+        });
+      } catch (error) {
+        console.error('Error fetching job stats for date range:', newStartDate, 'to', newEndDate, error);
+      }
+    }
   };
 
   const handlePauseCampaign = () => {
@@ -212,7 +225,7 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
           />
 
           {/* Date Range Picker */}
-          <div className="mb-6">
+          <div className="mb-6 lg:w-1/3">
             <DateRangePicker
               startDate={dateRangeStart}
               endDate={dateRangeEnd}

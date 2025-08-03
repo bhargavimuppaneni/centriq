@@ -84,3 +84,18 @@ export interface Campaign {
     page: number;
     pageSize: number;
   }
+
+  // Job Stats interfaces
+  export interface JobStatsRequest {
+    FromDate: string;
+    ToDate: string;
+    OrgId: number;
+    CampaignName: string;
+  }
+
+  export interface JobStatsResponse {
+    data: any[];
+    totalRecords: number;
+    success: boolean;
+    message?: string;
+  }

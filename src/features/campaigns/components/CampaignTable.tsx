@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { useNavigate } from '@tanstack/react-router';
 import type { Campaign } from '../types';
+import { useJobStats } from '../hooks/useCampaigns';
 
 interface CampaignTableProps {
   campaigns: Campaign[];
@@ -27,8 +28,46 @@ export const CampaignTable: React.FC<CampaignTableProps> = ({
   onCreateNewCampaign
 }) => {
   const navigate = useNavigate();
+  const jobStatsMutation = useJobStats();
 
-  const handleCampaignClick = (campaignId: string) => {
+  const handleCampaignClick = async (campaignId: string) => {
+    // Find the campaign to get its details
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (!campaign) {
+      console.error('Campaign not found:', campaignId);
+      navigate({ to: '/campaignOverview/$id', params: { id: campaignId } });
+      return;
+    }
+
+    // Format dates for the API call
+    const formatDateForAPI = (dateString: string) => {
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    };
+
+    // Get current date for toDate
+    const getCurrentDate = () => {
+      const today = new Date();
+      return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    };
+
+    const fromDate = formatDateForAPI(campaign.startDate);
+    const toDate = getCurrentDate(); // Use current date
+
+    // Make the job stats API call
+    try {
+      await jobStatsMutation.mutateAsync({
+        FromDate: fromDate,
+        ToDate: toDate,
+        OrgId: campaign.orgId,
+        CampaignName: campaign.name
+      });
+    } catch (error) {
+      console.error('Error fetching job stats for campaign:', campaign.name, error);
+      // Continue with navigation even if API call fails
+    }
+
+    // Navigate to campaign overview
     navigate({ to: '/campaignOverview/$id', params: { id: campaignId } });
   };
 
@@ -87,7 +126,7 @@ export const CampaignTable: React.FC<CampaignTableProps> = ({
   return (
     <>
       {/* Data Table Section */}
-      <div className="mb-4">
+      <div className="mb-4 flex">
         <h2 className="text-lg font-semibold text-gray-900">Data Table</h2>
       </div>
 
