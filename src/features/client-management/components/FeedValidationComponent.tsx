@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -111,7 +112,7 @@ export const FeedValidationComponent = () => {
       })
       .map(field => ({
         centralField: field.name,
-        feedField: 'Select Node',
+        feedField: '',
         isRequired: field.required
       }))
   );
@@ -175,8 +176,8 @@ export const FeedValidationComponent = () => {
   };
 
   const generateMappingJSON = () => {
-    // Filter out unmapped fields (those still set to "Select Node")
-    const mappedFields = fieldMappings.filter(mapping => mapping.feedField !== 'Select Node');
+    // Filter out unmapped fields (those with empty feedField)
+    const mappedFields = fieldMappings.filter(mapping => mapping.feedField !== '');
     
     // Create the JSON structure
     const mappingJSON = {
@@ -197,7 +198,7 @@ export const FeedValidationComponent = () => {
         feedNode: mapping.feedField,
         isRequired: mapping.isRequired
       })),
-      unmappedFields: fieldMappings.filter(mapping => mapping.feedField === 'Select Node').map(mapping => ({
+      unmappedFields: fieldMappings.filter(mapping => mapping.feedField === '').map(mapping => ({
         centriqField: mapping.centralField,
         isRequired: mapping.isRequired
       })),
@@ -245,11 +246,11 @@ export const FeedValidationComponent = () => {
 
   // Calculate mapping status
   const requiredMappings = fieldMappings.filter(mapping => mapping.isRequired);
-  const nonmappedRequiredFields = requiredMappings.filter(mapping => mapping.feedField === 'Select Node');
+  const nonmappedRequiredFields = requiredMappings.filter(mapping => mapping.feedField === '');
   const allRequiredFieldsMapped = nonmappedRequiredFields.length === 0;
   
   const optionalMappings = fieldMappings.filter(mapping => !mapping.isRequired);
-  const mappedOptionalFields = optionalMappings.filter(mapping => mapping.feedField !== 'Select Node');
+  const mappedOptionalFields = optionalMappings.filter(mapping => mapping.feedField !== '');
   const hasUnmappedOptionalFields = mappedOptionalFields.length < optionalMappings.length;
 
   return (
@@ -323,8 +324,11 @@ export const FeedValidationComponent = () => {
                             <Button
                               type="submit"
                               disabled={isAnalyzing}
-                              className="w-[156px] py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-[6px]"
+                              className="w-[156px] py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-[6px] flex items-center gap-2"
                             >
+                              {isAnalyzing && (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              )}
                               {isAnalyzing ? 'Analyzing...' : 'Validate'}
                             </Button>
                           </div>
@@ -340,80 +344,7 @@ export const FeedValidationComponent = () => {
                 </div>
               </form>
             </Form>
-
-            {isAnalyzing && (
-              <div className="flex items-center gap-2 text-sm text-blue-600 mt-4">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                Analyzing feed structure and detecting fields...
-              </div>
-            )}
           </div>
-
-          {/* Validation Results - Only show after validation */}
-          {validationResult && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Validation Results</h3>
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  {validationResult.isValid ? (
-                    <div className="flex items-center gap-2 text-green-600">
-                      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                      <span className="font-medium">Feed validation successful</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-red-600">
-                      <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-                      <span className="font-medium">Feed validation failed</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Format:</span>
-                    <span className="ml-2 font-medium">{getFormatName(validationResult.detectedFormat)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Total Records:</span>
-                    <span className="ml-2 font-medium">{validationResult.totalRecords.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Total Nodes:</span>
-                    <span className="ml-2 font-medium">{validationResult.totalNodes.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Content Type:</span>
-                    <span className="ml-2 font-medium">{validationResult.contentType}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Processing Time:</span>
-                    <span className="ml-2 font-medium">{validationResult.processingTime}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Estimated:</span>
-                    <span className="ml-2 font-medium">{validationResult.estimatedCounts ? 'Yes' : 'No'}</span>
-                  </div>
-                </div>
-
-                {validationResult.errorMessage && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-red-800 text-sm">{validationResult.errorMessage}</p>
-                  </div>
-                )}
-
-                {validationResult.validationErrors.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Validation Errors:</h4>
-                    <ul className="list-disc list-inside space-y-1">
-                      {validationResult.validationErrors.map((error, index) => (
-                        <li key={index} className="text-sm text-red-600">{error}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Feed Mapping Section - Always show */}
           <div className="border border-gray-200 rounded-lg bg-white">
@@ -451,7 +382,7 @@ export const FeedValidationComponent = () => {
                         height="24" 
                         viewBox="0 0 24 24" 
                         fill="none" 
-                        className={mapping.feedField !== 'Select Node' ? 'text-blue-500' : 'text-gray-400'}
+                        className={mapping.feedField !== '' ? 'text-blue-500' : 'text-gray-400'}
                       >
                         <path 
                           d="M5 12H19M19 12L12 5M19 12L12 19" 
@@ -464,21 +395,27 @@ export const FeedValidationComponent = () => {
                     </div>
 
                     {/* Feed Field Dropdown */}
-                    <div className="col-span-5">
+                    <div className="col-span-5 relative">
                       <select
                         value={mapping.feedField}
                         onChange={(e) => {
                           updateFieldMapping(index, e.target.value);
                         }}
-                        className="w-full px-4 py-4 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                        className="w-full px-4 py-4 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm appearance-none"
                       >
-                        <option value="Select Node">Select Node</option>
+                        {mapping.feedField === '' && (
+                          <option value="" disabled hidden>Select Node</option>
+                        )}
                         {availableFeedFields.filter((field: string) => field !== 'Select Field').map((field: string) => (
                           <option key={field} value={field}>
                             {field}
                           </option>
                         ))}
                       </select>
+                      {/* Custom dropdown arrow */}
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      </div>
                     </div>
                   </div>
                 ))}

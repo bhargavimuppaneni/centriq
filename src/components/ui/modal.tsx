@@ -22,9 +22,18 @@ export const Modal = ({
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
+      // Prevent background scrolling
+      document.body.style.overflow = 'hidden';
     } else {
       setIsVisible(false);
+      // Restore background scrolling
+      document.body.style.overflow = 'unset';
     }
+
+    // Cleanup function to restore scrolling when component unmounts
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -42,7 +51,7 @@ export const Modal = ({
       />
       
       {/* Modal content */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-start justify-center p-4 pt-24">
         <div 
           className={`relative w-full ${maxWidth} transform rounded-lg bg-white shadow-xl transition-all duration-200 ease-out ${
             isVisible 
