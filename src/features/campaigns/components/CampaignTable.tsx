@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, Filter, Plus, MoreHorizontal } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Filter, Plus, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { useNavigate } from '@tanstack/react-router';
@@ -29,6 +29,17 @@ export const CampaignTable: React.FC<CampaignTableProps> = ({
 }) => {
   const navigate = useNavigate();
   const jobStatsMutation = useJobStats();
+  const [statusFilter, setStatusFilter] = useState<string>('All States');
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+
+  const statusOptions = [
+    'All States',
+    'Active',
+    'In Review',
+    'Alerts',
+    'Warning',
+    'Paused'
+  ];
 
   const handleCampaignClick = async (campaignId: string) => {
     // Find the campaign to get its details
@@ -111,11 +122,20 @@ export const CampaignTable: React.FC<CampaignTableProps> = ({
     });
   };
 
-  // Filter campaigns based on search term
-  const filteredCampaigns = campaigns.filter(campaign =>
-    campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    campaign.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter campaigns based on search term and status
+  const filteredCampaigns = campaigns.filter(campaign => {
+    const matchesSearch = campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'All States' || 
+      (statusFilter === 'Active' && campaign.status === 'Active') ||
+      (statusFilter === 'In Review' && campaign.status === 'Review') ||
+      (statusFilter === 'Paused' && campaign.status === 'Paused') ||
+      (statusFilter === 'Alerts' && campaign.status === 'Pending') ||
+      (statusFilter === 'Warning' && campaign.status === 'Completed');
+    
+    return matchesSearch && matchesStatus;
+  });
 
   // Paginate filtered campaigns
   const paginatedCampaigns = filteredCampaigns.slice(
@@ -154,10 +174,38 @@ export const CampaignTable: React.FC<CampaignTableProps> = ({
                 Filter by Client
               </Button>
               
-              <Button variant="outline" size="sm" className="text-gray-600">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter by Status
-              </Button>
+              {/* Status Filter Dropdown */}
+              <div className="relative">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-gray-600 flex items-center gap-2"
+                  onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                >
+                  <Filter className="w-4 h-4" />
+                  Filter by Status
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                
+                {showStatusDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[150px]">
+                    {statusOptions.map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => {
+                          setStatusFilter(option);
+                          setShowStatusDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                          statusFilter === option ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               
               <Button variant="outline" size="sm" className="text-gray-600">
                 All Types
