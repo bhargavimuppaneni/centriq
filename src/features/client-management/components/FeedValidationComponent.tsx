@@ -8,6 +8,57 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useFeedValidation } from '@/features/client-management/hooks/useFeedValidation';
 
+// Static list of CentriQ System Fields based on AryaField values
+const CENTRIQ_SYSTEM_FIELDS = [
+  { name: 'CentriQ_ViewUrl', required: false },
+  { name: 'CentriQ_Description', required: true },
+  { name: 'CentriQ_ZipCode', required: false },
+  { name: 'CentriQ_Title', required: true },
+  { name: 'CentriQ_MaxExperience', required: false },
+  { name: 'CentriQ_City', required: true },
+  { name: 'CentriQ_ApplyUrl', required: true },
+  { name: 'CentriQ_CampaignInfo', required: false },
+  { name: 'CentriQ_CostPerApplicant', required: false },
+  { name: 'CentriQ_JobCode', required: false },
+  { name: 'CentriQ_State', required: false },
+  { name: 'CentriQ_Client', required: false },
+  { name: 'CentriQ_CountryCode', required: false },
+  { name: 'CentriQ_MinExperience', required: false },
+  { name: 'CentriQ_CostPerClick', required: false },
+];
+
+// Separate schema for feed validation (only feedUrl required)
+const feedValidationSchema = z.object({
+  feedUrl: z.string().url('Please enter a valid URL'),
+});
+
+// Complete form schema including field mappings with simpler validation
+const formSchema = z.object({
+  clientName: z.string().min(1, 'Client name is required'),
+  clientEmail: z.string().email('Please enter a valid email address'),
+  feedUrl: z.string().url('Please enter a valid URL'),
+  // Simplified field mappings validation
+  fieldMappings: z.array(z.object({
+    centralField: z.string(),
+    feedField: z.string(),
+    isRequired: z.boolean(),
+  }))
+}).superRefine((data, ctx) => {
+  // Custom validation for required field mappings
+  data.fieldMappings.forEach((mapping, index) => {
+    if (mapping.isRequired && !mapping.feedField) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "This field mapping is required",
+        path: ['fieldMappings', index, 'feedField'],
+      });
+    }
+  });
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+// Form data type including all possible fields
 interface FieldMapping {
   centralField: string;
   feedField: string;
@@ -29,41 +80,14 @@ interface FeedValidationResult {
   validationId?: string;
 }
 
-// Static list of CentriQ System Fields based on AryaField values
-const CENTRIQ_SYSTEM_FIELDS = [
-  { name: 'CentriQ_ViewUrl', required: false },
-  { name: 'CentriQ_Description', required: true },
-  { name: 'CentriQ_ZipCode', required: false },
-  { name: 'CentriQ_Title', required: true },
-  { name: 'CentriQ_MaxExperience', required: false },
-  { name: 'CentriQ_City', required: true },
-  { name: 'CentriQ_ApplyUrl', required: true },
-  { name: 'CentriQ_CampaignInfo', required: false },
-  { name: 'CentriQ_CostPerApplicant', required: false },
-  { name: 'CentriQ_JobCode', required: false },
-  { name: 'CentriQ_State', required: false },
-  { name: 'CentriQ_Client', required: false },
-  { name: 'CentriQ_CountryCode', required: false },
-  { name: 'CentriQ_MinExperience', required: false },
-  { name: 'CentriQ_CostPerClick', required: false },
-];
-
-// Form validation schema using Zod
-const formSchema = z.object({
-  clientName: z.string().min(1, 'Client name is required'),
-  clientEmail: z.string().email('Please enter a valid email address'),
-  feedUrl: z.string().url('Please enter a valid URL'),
-});
-
-type FormData = z.infer<typeof formSchema>;
-
 export const FeedValidationComponent = () => {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [validationResult, setValidationResult] = useState<FeedValidationResult | null>(null);
   const [validationId, setValidationId] = useState<string>('');
+  const [shouldValidateAll, setShouldValidateAll] = useState(false);
   
-  // Get the hook functions - only get what we actually use
+  // Use the feed validation hook
   const { 
+    feedValidationMutation,
     useAvailableFeedFields,
   } = useFeedValidation();
 
@@ -91,79 +115,215 @@ export const FeedValidationComponent = () => {
   // Use API fields if available, otherwise use mock fields
   const availableFeedFields = availableFeedFieldsData?.fields || mockAvailableFeedFields;
 
-  // Initialize react-hook-form with Zod validation
+  // Initialize react-hook-form with complete schema including field mappings
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange', // Change to onChange for immediate validation
     defaultValues: {
       clientName: '',
       clientEmail: '',
       feedUrl: '',
+      fieldMappings: CENTRIQ_SYSTEM_FIELDS
+        .sort((a, b) => {
+          // Sort by required fields first, then alphabetically
+          if (a.required && !b.required) return -1;
+          if (!a.required && b.required) return 1;
+          return a.name.localeCompare(b.name);
+        })
+        .map(field => ({
+          centralField: field.name,
+          feedField: '',
+          isRequired: field.required
+        }))
     },
   });
 
-  // Initialize field mappings based on static CentriQ system fields
-  const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>(
-    CENTRIQ_SYSTEM_FIELDS
-      .sort((a, b) => {
-        // Sort by required fields first, then alphabetically
-        if (a.required && !b.required) return -1;
-        if (!a.required && b.required) return 1;
-        return a.name.localeCompare(b.name);
-      })
-      .map(field => ({
-        centralField: field.name,
-        feedField: '',
-        isRequired: field.required
-      }))
-  );
-
-  const onSubmit = async (data: FormData) => {
-    setIsAnalyzing(true);
-    setValidationResult(null);
-
-    try {
-      // Mock API response for development
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const mockValidationId = Math.random().toString(36).substr(2, 9);
-      const mockResult: FeedValidationResult = {
-        isValid: true,
-        detectedFormat: 1,
-        totalNodes: 25955,
-        totalRecords: 552,
-        errorMessage: null,
-        validationErrors: [],
-        processingTime: "00:00:05.0488489",
-        feedUrl: data.feedUrl,
-        contentLength: 0,
-        contentType: "application/xml",
-        estimatedCounts: false,
-        validationId: mockValidationId,
-      };
-
-      setValidationResult(mockResult);
-      setValidationId(mockValidationId);
-
-    } catch (err) {
-      console.error('Feed validation failed:', err);
-      
-      // Handle different types of errors
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        form.setError('feedUrl', { message: 'Network error. Please check if the API server is running.' });
-      } else if (err instanceof Error) {
-        form.setError('feedUrl', { message: `API Error: ${err.message}` });
-      } else {
-        form.setError('feedUrl', { message: 'Failed to validate feed. Please try again.' });
-      }
-    } finally {
-      setIsAnalyzing(false);
+  // Handle feed validation (only validates feedUrl)
+  const handleFeedValidation = () => {
+    const feedUrl = form.getValues('feedUrl');
+    
+    // Validate only the feedUrl using the separate schema
+    const validationResult = feedValidationSchema.safeParse({ feedUrl });
+    
+    if (!validationResult.success) {
+      // Set error on the feedUrl field
+      form.setError('feedUrl', { 
+        message: validationResult.error.issues[0]?.message || 'Please enter a valid URL' 
+      });
+      return;
     }
+
+    // Clear any previous feed URL errors
+    form.clearErrors('feedUrl');
+    
+    // Reset previous validation result
+    setValidationResult(null);
+    
+    // Use the mutation from the hook
+    feedValidationMutation.mutate(feedUrl, {
+      onSuccess: (result) => {
+        // Generate a validation ID if not provided in response
+        const newValidationId = result.validationId || Math.random().toString(36).substr(2, 9);
+        
+        setValidationResult({
+          ...result,
+          validationId: newValidationId
+        });
+        setValidationId(newValidationId);
+      },
+      onError: (error: Error) => {
+        console.error('Feed validation failed:', error);
+        
+        // Handle different types of errors
+        if (error.message.includes('fetch')) {
+          form.setError('feedUrl', { message: 'Network error. Please check if the API server is running.' });
+        } else {
+          form.setError('feedUrl', { message: `API Error: ${error.message}` });
+        }
+      },
+    });
+  };
+
+  // Handle complete form submission for saving client (validates all fields)
+  const handleSaveClient = async () => {
+    // Trigger validation for the entire form including field mappings
+    const isFormValid = await form.trigger();
+    
+    if (!isFormValid) {
+      // Use multiple animation frames to ensure all DOM updates are complete
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            // Get fresh form values and manually check for errors
+            const formValues = form.getValues();
+            const { errors } = form.formState;
+            console.log('Form errors:', errors); // Debug log
+            console.log('Form values:', formValues); // Debug log
+            
+            let firstErrorElement: HTMLElement | null = null;
+            
+            // Check basic fields first - use manual validation
+            if (!formValues.clientName) {
+              firstErrorElement = document.querySelector(`[name="clientName"]`) as HTMLElement;
+              console.log('Found empty clientName field'); // Debug log
+            } else if (!formValues.clientEmail) {
+              firstErrorElement = document.querySelector(`[name="clientEmail"]`) as HTMLElement;
+              console.log('Found empty clientEmail field'); // Debug log
+            } else if (!formValues.feedUrl) {
+              firstErrorElement = document.querySelector(`[name="feedUrl"]`) as HTMLElement;
+              console.log('Found empty feedUrl field'); // Debug log
+            } else {
+              // Check for field mapping errors if basic fields are filled
+              console.log('Checking field mapping errors...'); // Debug log
+              const fieldMappings = formValues.fieldMappings;
+              
+              for (let i = 0; i < fieldMappings.length; i++) {
+                const mapping = fieldMappings[i];
+                if (mapping.isRequired && !mapping.feedField) {
+                  firstErrorElement = document.querySelector(`[data-mapping-index="${i}"]`) as HTMLElement;
+                  console.log('Found unmapped required field at index:', i); // Debug log
+                  break;
+                }
+              }
+            }
+            
+            if (firstErrorElement) {
+              console.log('Scrolling to error element:', firstErrorElement); // Debug log
+              firstErrorElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              });
+              // Small delay before focus to ensure scroll completes
+              setTimeout(() => {
+                firstErrorElement?.focus();
+              }, 300);
+            } else {
+              console.log('No error element found to scroll to'); // Debug log
+            }
+          }, 50);
+        });
+      });
+      return;
+    }
+
+    // Process the valid form data
+    const formData = form.getValues();
+    console.log('Saving client:', formData);
+    // Add your save client logic here
+  };
+
+  // Handle campaign setup (validates all fields)
+  const handleSetupCampaign = async () => {
+    // Trigger validation for the entire form including field mappings
+    const isFormValid = await form.trigger();
+    
+    if (!isFormValid) {
+      // Use multiple animation frames to ensure all DOM updates are complete
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            // Get fresh form values and manually check for errors
+            const formValues = form.getValues();
+            const { errors } = form.formState;
+            console.log('Form errors:', errors); // Debug log
+            console.log('Form values:', formValues); // Debug log
+            
+            let firstErrorElement: HTMLElement | null = null;
+            
+            // Check basic fields first - use manual validation
+            if (!formValues.clientName) {
+              firstErrorElement = document.querySelector(`[name="clientName"]`) as HTMLElement;
+              console.log('Found empty clientName field'); // Debug log
+            } else if (!formValues.clientEmail) {
+              firstErrorElement = document.querySelector(`[name="clientEmail"]`) as HTMLElement;
+              console.log('Found empty clientEmail field'); // Debug log
+            } else if (!formValues.feedUrl) {
+              firstErrorElement = document.querySelector(`[name="feedUrl"]`) as HTMLElement;
+              console.log('Found empty feedUrl field'); // Debug log
+            } else {
+              // Check for field mapping errors if basic fields are filled
+              console.log('Checking field mapping errors...'); // Debug log
+              const fieldMappings = formValues.fieldMappings;
+              
+              for (let i = 0; i < fieldMappings.length; i++) {
+                const mapping = fieldMappings[i];
+                if (mapping.isRequired && !mapping.feedField) {
+                  firstErrorElement = document.querySelector(`[data-mapping-index="${i}"]`) as HTMLElement;
+                  console.log('Found unmapped required field at index:', i); // Debug log
+                  break;
+                }
+              }
+            }
+            
+            if (firstErrorElement) {
+              console.log('Scrolling to error element:', firstErrorElement); // Debug log
+              firstErrorElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              });
+              // Small delay before focus to ensure scroll completes
+              setTimeout(() => {
+                firstErrorElement?.focus();
+              }, 300);
+            } else {
+              console.log('No error element found to scroll to'); // Debug log
+            }
+          }, 50);
+        });
+      });
+      return;
+    }
+
+    // Process the valid form data
+    const formData = form.getValues();
+    console.log('Setting up campaign for client:', formData);
+    // Add your campaign setup logic here
   };
 
   const updateFieldMapping = (index: number, value: string) => {
-    const updatedMappings = [...fieldMappings];
+    const updatedMappings = [...form.getValues().fieldMappings];
     updatedMappings[index].feedField = value;
-    setFieldMappings(updatedMappings);
+    form.setValue('fieldMappings', updatedMappings);
   };
 
   const getFormatName = (format: number): string => {
@@ -177,7 +337,7 @@ export const FeedValidationComponent = () => {
 
   const generateMappingJSON = () => {
     // Filter out unmapped fields (those with empty feedField)
-    const mappedFields = fieldMappings.filter(mapping => mapping.feedField !== '');
+    const mappedFields = form.getValues().fieldMappings.filter(mapping => mapping.feedField !== '');
     
     // Create the JSON structure
     const mappingJSON = {
@@ -198,16 +358,16 @@ export const FeedValidationComponent = () => {
         feedNode: mapping.feedField,
         isRequired: mapping.isRequired
       })),
-      unmappedFields: fieldMappings.filter(mapping => mapping.feedField === '').map(mapping => ({
+      unmappedFields: form.getValues().fieldMappings.filter(mapping => mapping.feedField === '').map(mapping => ({
         centriqField: mapping.centralField,
         isRequired: mapping.isRequired
       })),
       mappingCount: {
-        total: fieldMappings.length,
+        total: form.getValues().fieldMappings.length,
         mapped: mappedFields.length,
-        unmapped: fieldMappings.length - mappedFields.length,
+        unmapped: form.getValues().fieldMappings.length - mappedFields.length,
         requiredMapped: mappedFields.filter(m => m.isRequired).length,
-        requiredTotal: fieldMappings.filter(m => m.isRequired).length
+        requiredTotal: form.getValues().fieldMappings.filter(m => m.isRequired).length
       },
       timestamp: new Date().toISOString()
     };
@@ -245,230 +405,250 @@ export const FeedValidationComponent = () => {
   };
 
   // Calculate mapping status
-  const requiredMappings = fieldMappings.filter(mapping => mapping.isRequired);
+  const requiredMappings = form.getValues().fieldMappings.filter(mapping => mapping.isRequired);
   const nonmappedRequiredFields = requiredMappings.filter(mapping => mapping.feedField === '');
   const allRequiredFieldsMapped = nonmappedRequiredFields.length === 0;
   
-  const optionalMappings = fieldMappings.filter(mapping => !mapping.isRequired);
+  const optionalMappings = form.getValues().fieldMappings.filter(mapping => !mapping.isRequired);
   const mappedOptionalFields = optionalMappings.filter(mapping => mapping.feedField !== '');
   const hasUnmappedOptionalFields = mappedOptionalFields.length < optionalMappings.length;
 
   return (
     <div className="flex flex-col h-full">
-      {/* Main Content Area */}
       <div className="flex-1">
-        <div className="space-y-6 ">
+        <div className="space-y-6">
           <div className="text-left">
             <h2 className="text-[20px] font-semibold text-gray-900 mb-2 text-left">Add a New Client</h2>
             <p className="text-[16px] text-gray-600 text-left">
               Match your job feed&apos;s fields to CentriQ&apos;s system fields. Required fields are marked with an asterisk (*). AI can suggest mappings to save you time.
             </p>
           </div>
-
-          {/* Job Feed Source Section with shadcn/ui Form */}
-          <div className="border border-gray-200 rounded-lg p-6 pb-12 pt-6 bg-white shadow-sm">
-            <h3 className="text-[18px] font-semibold text-gray-900 text-left mb-4">Job Feed Source</h3>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {/* Client Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Client Name Field */}
-                  <FormField
-                    control={form.control}
-                    name="clientName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left text-[14px] text-[#333333] font-semibold">Client Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., TechInnovate Solutions" className="h-12 text-[16px]" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Contact Email Field */}
-                  <FormField
-                    control={form.control}
-                    name="clientEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left text-[14px] text-[#333333] font-semibold">Contact Email *</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="contact@client.com" className="h-12 text-[16px]" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Feed URL Field */}
-                <div className="mt-6 border border-gray-300 rounded-md p-4">
-                  <FormField
-                    control={form.control}
-                    name="feedUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-left text-[14px] text-[#333333]">Job Feed URL</FormLabel>
-                        <FormControl>
-                          <div className="flex gap-3">
-                            <Input 
-                              type="url" 
-                              placeholder="https://globaltech.com/jobs/feed.xml" 
-                              className="flex-1"
-                              disabled={isAnalyzing}
-                              {...field} 
-                            />
-                            <Button
-                              type="submit"
-                              disabled={isAnalyzing}
-                              className="w-[156px] py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-[6px] flex items-center gap-2"
-                            >
-                              {isAnalyzing && (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              )}
-                              {isAnalyzing ? 'Analyzing...' : 'Validate'}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <p className="text-[14px] text-gray-600 mt-4 text-left">
-                    Enter the complete URL to your job feed (XML, JSON format)
-                  </p>
-                </div>
-              </form>
-            </Form>
-          </div>
-
-          {/* Feed Mapping Section - Always show */}
-          <div className="border border-gray-200 rounded-lg bg-white">
-            <h3 className="text-[20px] font-semibold text-gray-900 text-left pt-6 pl-6 mb-0 pb-0">Feed Mapping</h3>
-            <div className="p-6">
-              {/* Header Row */}
-              <div className="grid grid-cols-12 gap-4 mb-6 pb-4 border-b border-gray-200">
-                <div className="col-span-5">
-                  <h4 className="text-sm font-semibold text-gray-700 text-left">CentriQ System Fields</h4>
-                </div>
-                <div className="col-span-2"></div>
-                <div className="col-span-5">
-                  <h4 className="text-sm font-semibold text-gray-700 text-left">Your Feed Nodes</h4>
+          
+          {/* Single form wrapping only the basic form fields */}
+          <Form {...form}>
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+              {/* Job Feed Source Section */}
+              <div className="border border-gray-200 rounded-lg p-6 pb-12 pt-6 bg-white shadow-sm">
+                <h3 className="text-[18px] font-semibold text-gray-900 text-left mb-4">Job Feed Source</h3>            
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="clientName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-left text-[14px] text-[#333333] font-semibold">
+                            Client Name <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., TechInnovate Solutions" className="h-12 text-[16px]" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="clientEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-left text-[14px] text-[#333333] font-semibold">
+                            Contact Email <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="contact@client.com" className="h-12 text-[16px]" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="mt-6 border border-gray-300 rounded-md p-4">
+                    <FormField
+                      control={form.control}
+                      name="feedUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-left text-[14px] text-[#333333]">Job Feed URL</FormLabel>
+                          <FormControl>
+                            <div className="flex gap-3">
+                              <Input 
+                                type="url" 
+                                placeholder="https://globaltech.com/jobs/feed.xml" 
+                                className="flex-1"
+                                disabled={feedValidationMutation.isPending}
+                                {...field} 
+                              />
+                              <Button
+                                type="button"
+                                onClick={handleFeedValidation}
+                                disabled={feedValidationMutation.isPending}
+                                className="w-[156px] py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-[6px] flex items-center gap-2"
+                              >
+                                {feedValidationMutation.isPending && (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                )}
+                                {feedValidationMutation.isPending ? 'Analyzing...' : 'Validate'}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <p className="text-[14px] text-gray-600 mt-4 text-left">
+                      Enter the complete URL to your job feed (XML, JSON format)
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Mapping Rows */}
-              <div className="space-y-4">
-                {fieldMappings.map((mapping, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-4 items-center py-0.1">
-                    {/* CentriQ Field */}
+              {/* Feed Mapping Section - Now using FormField components */}
+              <div className="border border-gray-200 rounded-lg bg-white">
+                <h3 className="text-[20px] font-semibold text-gray-900 text-left pt-6 pl-6 mb-0 pb-0">Feed Mapping</h3>
+                <div className="p-6">
+                  {/* Header Row */}
+                  <div className="grid grid-cols-12 gap-4 mb-6 pb-4 border-b border-gray-200">
                     <div className="col-span-5">
-                      <div className="flex items-center bg-gray-100 px-3 py-4 rounded-md">
-                        <span className="text-sm font-medium text-gray-700">
-                          {mapping.centralField}
-                          {mapping.isRequired && <span className="text-red-500 ml-1">*</span>}
-                        </span>
-                      </div>
+                      <h4 className="text-sm font-semibold text-gray-700 text-left">CentriQ System Fields</h4>
                     </div>
-
-                    {/* Arrow */}
-                    <div className="col-span-2 flex justify-center">
-                      <svg 
-                        width="24" 
-                        height="24" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        className={mapping.feedField !== '' ? 'text-blue-500' : 'text-gray-400'}
-                      >
-                        <path 
-                          d="M5 12H19M19 12L12 5M19 12L12 19" 
-                          stroke="currentColor" 
-                          strokeWidth="2" 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-
-                    {/* Feed Field Dropdown */}
-                    <div className="col-span-5 relative">
-                      <select
-                        value={mapping.feedField}
-                        onChange={(e) => {
-                          updateFieldMapping(index, e.target.value);
-                        }}
-                        className="w-full px-4 py-4 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm appearance-none"
-                      >
-                        {mapping.feedField === '' && (
-                          <option value="" disabled hidden>Select Node</option>
-                        )}
-                        {availableFeedFields.filter((field: string) => field !== 'Select Field').map((field: string) => (
-                          <option key={field} value={field}>
-                            {field}
-                          </option>
-                        ))}
-                      </select>
-                      {/* Custom dropdown arrow */}
-                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <ChevronDown className="w-4 h-4 text-gray-500" />
-                      </div>
+                    <div className="col-span-2"></div>
+                    <div className="col-span-5">
+                      <h4 className="text-sm font-semibold text-gray-700 text-left">Your Feed Nodes</h4>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              {/* Additional Fields Section */}
-              <div className="mt-8 space-y-4">
-                {/* Status Messages */}
-                <div className="space-y-3">
-                  {/* Success Message - Only show when all required fields are actually mapped */}
-                  {allRequiredFieldsMapped && (
-                    <div className="flex items-center p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm font-medium text-green-800">All required fields are mapped successfully.</span>
-                      </div>
-                    </div>
-                  )}
+                  {/* Mapping Rows - Now using FormField components */}
+                  <div className="space-y-4">
+                    {form.watch('fieldMappings').map((mapping, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-4 items-center py-0.1">
+                        {/* CentriQ Field */}
+                        <div className="col-span-5">
+                          <div className="flex items-center bg-gray-100 px-3 py-4 rounded-md">
+                            <span className="text-sm font-medium text-gray-700">
+                              {mapping.centralField}
+                              {mapping.isRequired && <span className="text-red-500 ml-1">*</span>}
+                            </span>
+                          </div>
+                        </div>
 
-                  {/* Warning Message - Only show when there are unmapped optional fields */}
-                  {hasUnmappedOptionalFields && (
-                    <div className="flex items-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <svg className="h-5 w-5 text-yellow-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm font-medium text-yellow-800">Optional fields unmapped. Consider mapping for richer job data.</span>
+                        {/* Arrow */}
+                        <div className="col-span-2 flex justify-center">
+                          <svg 
+                            width="24" 
+                            height="24" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            className={mapping.feedField !== '' ? 'text-blue-500' : 'text-gray-400'}
+                          >
+                            <path 
+                              d="M5 12H19M19 12L12 5M19 12L12 19" 
+                              stroke="currentColor" 
+                              strokeWidth="2" 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </div>
+
+                        {/* Feed Field Dropdown - Now using FormField */}
+                        <div className="col-span-5">
+                          <FormField
+                            control={form.control}
+                            name={`fieldMappings.${index}.feedField`}
+                            render={({ field, fieldState }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <select
+                                      {...field}
+                                      data-mapping-index={index}
+                                      className={`w-full px-4 py-4 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 bg-white text-sm appearance-none ${
+                                        fieldState.error
+                                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                      }`}
+                                    >
+                                      {field.value === '' && (
+                                        <option value="" disabled hidden>Select Node</option>
+                                      )}
+                                      {availableFeedFields.filter((fieldOption: string) => fieldOption !== 'Select Field').map((fieldOption: string) => (
+                                        <option key={fieldOption} value={fieldOption}>
+                                          {fieldOption}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {/* Custom dropdown arrow */}
+                                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                                    </div>
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
+
+                  {/* Status Messages */}
+                  <div className="mt-8 space-y-3">
+                    {/* Success Message - Only show when all required fields are actually mapped */}
+                    {allRequiredFieldsMapped && (
+                      <div className="flex items-center p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm font-medium text-green-800">All required fields are mapped successfully.</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warning Message - Only show when there are unmapped optional fields */}
+                    {hasUnmappedOptionalFields && (
+                      <div className="flex items-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <svg className="h-5 w-5 text-yellow-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm font-medium text-yellow-600">Optional fields unmapped. Consider mapping for richer job data.</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Form Action Buttons - Now part of the form */}
+                  <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-4">
+                    <Button 
+                      type="submit"
+                      variant="outline" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSaveClient();
+                      }}
+                      className="px-6 py-2 border-blue-600 text-blue-600 bg-white"
+                    >
+                      Save Client
+                    </Button>
+                    <Button 
+                      type="submit"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSetupCampaign();
+                      }}
+                      className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Save client and Set up Campaign →
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer - Breaking out of modal padding with negative margins */}
-      <div className="-mx-8 -mb-4 mt-6 bg-gray-100 border-t border-gray-200 px-10 pt-6 pb-8 rounded-b-lg">
-        <div className="flex justify-end gap-4">
-          <Button 
-            variant="outline" 
-            className="px-6 py-2 border-blue-600 text-blue-600 bg-white"
-          >
-            Save Client
-          </Button>
-          <Button 
-            className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Save client and Set up Campaign →
-          </Button>
+            </form>
+          </Form>
         </div>
       </div>
     </div>
