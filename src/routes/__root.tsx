@@ -7,7 +7,7 @@ import { Navbar } from '@/components/navbar';
 export const Route = createRootRoute({
   component: () => (
     <>
-      <Navbar userName="John Doe" />
+      <Navbar userName="John Doe" userEmail="john.doe@example.com" />
       <div className="pt-16 transition-all duration-900 ease-in-out"> {/* Added smooth transition for page changes */}
         <Outlet />
       </div>

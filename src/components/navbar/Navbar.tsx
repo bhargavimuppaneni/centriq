@@ -1,13 +1,17 @@
 import * as React from "react"
 import { Bell } from 'lucide-react'
 import { CentriqLogo } from '@/components/ui/centriq-logo'
+import { UserProfileDropdown } from '@/features/user-management'
 
 interface NavbarProps extends React.HTMLAttributes<HTMLDivElement> {
   userName?: string
+  userEmail?: string
 }
 
 export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
-  ({ userName = "User", ...props }, ref) => {
+  ({ userName = "User", userEmail = "user@example.com", ...props }, ref) => {
+    const [isDropdownOpen, setIsDropdownOpen] = React.useState(false)
+
     const getInitials = (name: string) => {
       return name
         .split(' ')
@@ -15,6 +19,26 @@ export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
         .join('')
         .slice(0, 2); // Take only first 2 initials
     };
+
+    const handleUserAccountClick = () => {
+      console.log('User Account clicked')
+      setIsDropdownOpen(false)
+    }
+
+    const handleHelpSupportClick = () => {
+      console.log('Help & Support clicked')
+      setIsDropdownOpen(false)
+    }
+
+    const handleAccountManagementClick = () => {
+      console.log('Account Management clicked')
+      setIsDropdownOpen(false)
+    }
+
+    const handleLogoutClick = () => {
+      console.log('Logout clicked')
+      setIsDropdownOpen(false)
+    }
 
     return (
       <div ref={ref} className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-8 py-4" {...props}>
@@ -35,9 +59,26 @@ export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
                 <span className="text-white text-xs font-medium">1</span>
               </div>
             </div>
-            {/* User Avatar */}
-            <div className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer" style={{ backgroundColor: '#3B82F8', border: '1px solid #063E98' }}>
-              <span className="text-white text-xs font-semibold">{getInitials(userName)}</span>
+            {/* User Avatar with Dropdown */}
+            <div className="relative">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity" 
+                style={{ backgroundColor: '#3B82F8', border: '1px solid #063E98' }}
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              >
+                <span className="text-white text-xs font-semibold">{getInitials(userName)}</span>
+              </div>
+              
+              <UserProfileDropdown
+                userName={userName}
+                userEmail={userEmail}
+                isOpen={isDropdownOpen}
+                onClose={() => setIsDropdownOpen(false)}
+                onUserAccountClick={handleUserAccountClick}
+                onHelpSupportClick={handleHelpSupportClick}
+                onAccountManagementClick={handleAccountManagementClick}
+                onLogoutClick={handleLogoutClick}
+              />
             </div>
           </div>
         </div>
