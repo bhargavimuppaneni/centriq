@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Bell } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
 import { CentriqLogo } from '@/components/ui/centriq-logo'
 import { UserProfileDropdown } from '@/features/user-management'
 
@@ -11,6 +12,7 @@ interface NavbarProps extends React.HTMLAttributes<HTMLDivElement> {
 export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
   ({ userName = "User", userEmail = "user@example.com", ...props }, ref) => {
     const [isDropdownOpen, setIsDropdownOpen] = React.useState(false)
+    const navigate = useNavigate()
 
     const getInitials = (name: string) => {
       return name
@@ -31,7 +33,7 @@ export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
     }
 
     const handleAccountManagementClick = () => {
-      console.log('Account Management clicked')
+      navigate({ to: '/account' })
       setIsDropdownOpen(false)
     }
 

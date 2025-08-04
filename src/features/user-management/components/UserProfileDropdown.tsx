@@ -85,9 +85,9 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
 
         <button
           onClick={onAccountManagementClick}
-          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 active:bg-blue-100 transition-all duration-200 cursor-pointer group"
         >
-          <User className="w-4 h-4" />
+          <User className="w-4 h-4 group-hover:text-blue-600 transition-colors" />
           Account Management
         </button>
       </div>

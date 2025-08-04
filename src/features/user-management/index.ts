@@ -1,1 +1,1 @@
-export { UserProfileDropdown } from './components'
+export { UserProfileDropdown, AccountManagementOverview } from './components'
