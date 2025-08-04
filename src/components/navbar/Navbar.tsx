@@ -47,7 +47,12 @@ export const Navbar = React.forwardRef<HTMLDivElement, NavbarProps>(
         <div className="flex items-center justify-between px-16 mx-auto" style={{ maxWidth: 'calc(100% - 40px)' }}>
           <div className="flex items-center gap-8 ml-2">
             <div className="flex items-center gap-2">
-              <CentriqLogo className="h-6" />
+              <div 
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => navigate({ to: '/campaign' })}
+              >
+                <CentriqLogo className="h-6" />
+              </div>
             </div>
             <nav className="flex items-center gap-8">
               <a href="#" className="text-blue-600 font-semibold text-sm leading-5 tracking-normal">Dashboard</a>
