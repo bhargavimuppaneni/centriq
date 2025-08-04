@@ -7,10 +7,10 @@ import { CampaignMetrics } from './CampaignMetrics';
 import { CampaignActions } from './CampaignActions';
 import { BudgetGoals } from './BudgetGoals';
 import { CampaignDetails } from './CampaignDetails';
-import { useCampaign, useJobStats } from '../hooks/useCampaigns';
+import { useCampaign, useJobStats, useJobStatsData } from '../hooks/useCampaigns';
 
-// Sample data for the chart
-const chartData = [
+// Fallback data for the chart when no job stats are available
+const fallbackChartData = [
   { date: 'Jun 15', dailyCTAs: 45, dailySpend: 280 },
   { date: 'Jun 20', dailyCTAs: 52, dailySpend: 320 },
   { date: 'Jun 25', dailyCTAs: 48, dailySpend: 310 },
@@ -75,7 +75,7 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
   ctaChange: fallbackCtaChange = 8.3,
   cpaChange: fallbackCpaChange = -5.2,
   ctrChange: fallbackCtrChange = 15.7,
-  chartData: propChartData = chartData,
+  chartData: propChartData = fallbackChartData,
   // Budget & Goals defaults
   totalBudget: fallbackTotalBudget = 4000,
   currentSpend: fallbackCurrentSpend = 1750,
@@ -102,6 +102,74 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
   // Fetch campaign data if campaignId is provided
   const { data: campaign, isLoading, error } = useCampaign(campaignId || '');
   const jobStatsMutation = useJobStats();
+  
+  // Get cached job stats data
+  const { data: jobStatsData } = useJobStatsData(campaign?.name || '');
+
+  // Helper function to format date for chart display
+  const formatChartDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  // Transform Campaign_stats data for chart
+  const getChartData = () => {
+    if (jobStatsData && jobStatsData.Campaign_stats && jobStatsData.Campaign_stats.length > 0) {
+      // Sort by date to ensure proper chronological order
+      const sortedStats = [...jobStatsData.Campaign_stats].sort((a, b) => 
+        new Date(a.Activity_date).getTime() - new Date(b.Activity_date).getTime()
+      );
+      
+      return sortedStats.map(stat => ({
+        date: formatChartDate(stat.Activity_date),
+        dailyCTAs: stat.Apply_count,
+        dailySpend: Number(stat.Spent.toFixed(2))
+      }));
+    }
+    
+    // Return fallback data if no job stats available
+    return propChartData;
+  };
+
+  const chartData = getChartData();
+
+  // Calculate dynamic chart domains based on actual data
+  const getChartDomains = () => {
+    if (chartData.length === 0) {
+      return {
+        ctaDomain: [0, 100] as [number, number],
+        spendDomain: [0, 500] as [number, number]
+      };
+    }
+
+    const ctaValues = chartData.map(d => d.dailyCTAs);
+    const spendValues = chartData.map(d => d.dailySpend);
+    
+    const ctaMin = Math.min(...ctaValues);
+    const ctaMax = Math.max(...ctaValues);
+    const spendMin = Math.min(...spendValues);
+    const spendMax = Math.max(...spendValues);
+    
+    // Add some padding to the domains
+    const ctaPadding = Math.max(1, (ctaMax - ctaMin) * 0.1);
+    const spendPadding = Math.max(10, (spendMax - spendMin) * 0.1);
+    
+    return {
+      ctaDomain: [
+        Math.max(0, ctaMin - ctaPadding), 
+        ctaMax + ctaPadding
+      ] as [number, number],
+      spendDomain: [
+        Math.max(0, spendMin - spendPadding), 
+        spendMax + spendPadding
+      ] as [number, number]
+    };
+  };
+
+  const { ctaDomain, spendDomain } = getChartDomains();
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -118,23 +186,28 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
   const createdBy = campaign?.createdBy || fallbackCreatedBy;
   const createdDate = campaign ? formatDate(campaign.createdDate) : fallbackCreatedDate;
   const status = campaign?.status || fallbackStatus;
-  const totalSpend = campaign?.currentSpend || fallbackTotalSpend;
-  const achievedCTAs = campaign?.achievedCTAs || fallbackAchievedCTAs;
-  const averageCPA = campaign?.costPerAction || fallbackAverageCPA;
-  const ctr = fallbackCtr; // Not available in campaign data, use fallback
-  const spendChange = fallbackSpendChange; // Not available in campaign data, use fallback
-  const ctaChange = fallbackCtaChange; // Not available in campaign data, use fallback
-  const cpaChange = fallbackCpaChange; // Not available in campaign data, use fallback
-  const ctrChange = fallbackCtrChange; // Not available in campaign data, use fallback
   
-  // Budget & Goals - use campaign data where available
-  const totalBudget = campaign?.budget || fallbackTotalBudget;
-  const currentSpend = campaign?.currentSpend || fallbackCurrentSpend;
+  // Use job stats data to override metrics where available
+  const totalSpend = jobStatsData ? jobStatsData.Campaign_stats.reduce((sum, stat) => sum + stat.Spent, 0) : (campaign?.currentSpend || fallbackTotalSpend);
+  const achievedCTAs = jobStatsData ? jobStatsData.Applies : (campaign?.achievedCTAs || fallbackAchievedCTAs);
+  const averageCPA = jobStatsData ? jobStatsData.CPA : (campaign?.costPerAction || fallbackAverageCPA);
+  const totalClicks = jobStatsData ? jobStatsData.Clicks : fallbackAchievedCTAs;
+  const conversionRate = jobStatsData ? jobStatsData.CR : fallbackCtr;
+  
+  // Calculate changes (you might want to compare with previous period data)
+  const spendChange = fallbackSpendChange; // Keep fallback until you have historical data
+  const ctaChange = fallbackCtaChange;
+  const cpaChange = fallbackCpaChange;
+  const ctrChange = fallbackCtrChange;
+  
+  // Budget & Goals - use job stats data where available
+  const totalBudget = jobStatsData ? jobStatsData.Budget || (campaign?.budget || fallbackTotalBudget) : (campaign?.budget || fallbackTotalBudget);
+  const currentSpend = totalSpend;
   const remainingBudget = totalBudget - currentSpend;
-  const budgetProgress = campaign?.budgetUtilized || fallbackBudgetProgress;
+  const budgetProgress = totalBudget > 0 ? (currentSpend / totalBudget) * 100 : (campaign?.budgetUtilized || fallbackBudgetProgress);
   const targetApplications = fallbackTargetApplications; // Not in campaign data
-  const currentApplications = fallbackCurrentApplications; // Not in campaign data
-  const applicationsNeeded = targetApplications - currentApplications;
+  const currentApplications = achievedCTAs; // Not in campaign data
+  const applicationsNeeded = Math.max(0, targetApplications - currentApplications);
   const goalProgress = (currentApplications / targetApplications) * 100;
   
   // Campaign Details - use campaign data where available
@@ -245,10 +318,10 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
 
           {/* Metrics Grid */}
           <CampaignMetrics
-            totalSpend={totalSpend}
-            achievedCTAs={achievedCTAs}
+            totalSpend={currentSpend}
+            achievedCTAs={totalClicks}
             averageCPA={averageCPA}
-            ctr={ctr}
+            ctr={conversionRate}
             spendChange={spendChange}
             ctaChange={ctaChange}
             cpaChange={cpaChange}
@@ -259,12 +332,12 @@ export const CampaignOverview: React.FC<CampaignOverviewProps> = ({
         {/* Chart Section */}
         <div className="mb-8">
           <CampaignChart
-            data={propChartData}
+            data={chartData}
             title="Daily CTAs & Spend Trend"
             height={320}
             onDateRangeChange={handleDateRangeChange}
-            ctaDomain={[40, 80]}
-            spendDomain={[250, 450]}
+            ctaDomain={ctaDomain}
+            spendDomain={spendDomain}
           />
         </div>
 
